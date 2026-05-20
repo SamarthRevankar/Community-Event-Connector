@@ -8,6 +8,9 @@ const dotenv = require('dotenv');
 // Load env variables
 dotenv.config();
 
+// Disable mongoose buffering — fail fast instead of hanging
+mongoose.set('bufferCommands', false);
+
 const app = express();
 const server = http.createServer(app);
 
@@ -35,7 +38,6 @@ io.on('connection', (socket) => {
 // ── Middleware ───────────────────────────────────────────
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (e.g., mobile apps, curl)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     return callback(new Error(`CORS blocked for origin: ${origin}`));
@@ -45,37 +47,55 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// ── MongoDB connection (cached for serverless) ────────────
-let isConnected = false;
+// ── MongoDB connection (cached + awaited per request) ─────
+let cachedConnection = null;
 
 const connectDB = async () => {
-  if (isConnected) return;
+  // Already connected
+  if (cachedConnection && mongoose.connection.readyState === 1) {
+    return cachedConnection;
+  }
+
   const MONGO_URI = process.env.MONGO_URI;
   if (!MONGO_URI) {
-    console.log('⚠️  MONGO_URI not set — running without database');
-    return;
+    throw new Error('MONGO_URI environment variable is not set');
   }
-  try {
-    await mongoose.connect(MONGO_URI);
-    isConnected = true;
-    console.log('✅ MongoDB connected');
 
-    // Auto-seed on first run
-    const { seedDatabase } = require('./seed');
-    await seedDatabase();
-  } catch (err) {
-    console.error('❌ MongoDB connection failed:', err.message);
-  }
+  cachedConnection = await mongoose.connect(MONGO_URI, {
+    serverSelectionTimeoutMS: 8000,  // fail after 8s instead of hanging
+    connectTimeoutMS: 8000,
+  });
+
+  console.log('✅ MongoDB connected');
+
+  // Auto-seed on first run
+  const { seedDatabase } = require('./seed');
+  await seedDatabase();
+
+  return cachedConnection;
 };
 
-// Connect on startup (runs immediately for both local and Vercel cold starts)
-connectDB();
+// ── DB connection middleware (runs before every request) ──
+app.use(async (req, res, next) => {
+  try {
+    await connectDB();
+    next();
+  } catch (err) {
+    console.error('❌ DB connection error:', err.message);
+    res.status(503).json({
+      success: false,
+      message: 'Database unavailable. Please try again shortly.',
+      error: err.message,
+    });
+  }
+});
 
 // ── Routes ───────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
     status: 'ok',
     message: 'Community Event Connector API is running',
+    dbState: mongoose.connection.readyState,
     timestamp: new Date().toISOString(),
   });
 });
@@ -92,7 +112,6 @@ app.use((req, res) => {
 app.use((err, req, res, next) => {
   console.error(err.stack);
 
-  // Mongoose validation error
   if (err.name === 'ValidationError') {
     const errors = Object.values(err.errors).map((e) => ({
       field: e.path,
@@ -101,7 +120,6 @@ app.use((err, req, res, next) => {
     return res.status(422).json({ success: false, message: 'Validation failed', errors });
   }
 
-  // Mongoose cast error (bad ObjectId)
   if (err.name === 'CastError') {
     return res.status(400).json({ success: false, message: 'Invalid ID format' });
   }
