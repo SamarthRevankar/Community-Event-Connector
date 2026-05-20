@@ -12,9 +12,13 @@ export const SocketProvider = ({ children }) => {
     // In development Vite proxies /socket.io to the backend automatically,
     // so we can connect without specifying the host. In production the
     // frontend is served from the same origin as the API.
+    // Vercel serverless cannot hold persistent WebSocket connections.
+    // Use polling-only transport so Socket.IO works in production.
+    // For true real-time WebSockets, consider migrating the backend to Railway/Render.
+    const isProduction = import.meta.env.PROD;
     const newSocket = io(import.meta.env.VITE_API_URL || '', {
       withCredentials: true,
-      transports: ['websocket', 'polling'],
+      transports: isProduction ? ['polling'] : ['websocket', 'polling'],
     });
 
     newSocket.on('connect', () => {
