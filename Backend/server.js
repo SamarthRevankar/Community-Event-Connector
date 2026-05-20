@@ -45,6 +45,32 @@ app.use(cors({
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
+// ── MongoDB connection (cached for serverless) ────────────
+let isConnected = false;
+
+const connectDB = async () => {
+  if (isConnected) return;
+  const MONGO_URI = process.env.MONGO_URI;
+  if (!MONGO_URI) {
+    console.log('⚠️  MONGO_URI not set — running without database');
+    return;
+  }
+  try {
+    await mongoose.connect(MONGO_URI);
+    isConnected = true;
+    console.log('✅ MongoDB connected');
+
+    // Auto-seed on first run
+    const { seedDatabase } = require('./seed');
+    await seedDatabase();
+  } catch (err) {
+    console.error('❌ MongoDB connection failed:', err.message);
+  }
+};
+
+// Connect on startup (runs immediately for both local and Vercel cold starts)
+connectDB();
+
 // ── Routes ───────────────────────────────────────────────
 app.get('/api/health', (req, res) => {
   res.json({
@@ -86,33 +112,15 @@ app.use((err, req, res, next) => {
   });
 });
 
-// ── Database + Server Start ───────────────────────────────
-const PORT = process.env.PORT || 5000;
-const MONGO_URI = process.env.MONGO_URI;
+// ── Local dev server (not used by Vercel) ────────────────
+if (process.env.NODE_ENV !== 'production') {
+  const PORT = process.env.PORT || 5000;
+  server.listen(PORT, () => {
+    console.log(`🚀 Server running on http://localhost:${PORT}`);
+    console.log(`   Health check: http://localhost:${PORT}/api/health`);
+    console.log(`   Events API:   http://localhost:${PORT}/api/events`);
+  });
+}
 
-const startServer = async () => {
-  try {
-    if (MONGO_URI) {
-      await mongoose.connect(MONGO_URI);
-      console.log('✅ MongoDB connected');
-
-      // Auto-seed on first run
-      const { seedDatabase } = require('./seed');
-      await seedDatabase();
-    } else {
-      console.log('⚠️  MONGO_URI not set — running without database');
-      console.log('   Copy backend/.env.example to backend/.env and add your MongoDB URI');
-    }
-
-    server.listen(PORT, () => {
-      console.log(`🚀 Server running on http://localhost:${PORT}`);
-      console.log(`   Health check: http://localhost:${PORT}/api/health`);
-      console.log(`   Events API:   http://localhost:${PORT}/api/events`);
-    });
-  } catch (error) {
-    console.error('❌ Failed to start server:', error.message);
-    process.exit(1);
-  }
-};
-
-startServer();
+// ── CRITICAL: Export app for Vercel serverless ───────────
+module.exports = app;
