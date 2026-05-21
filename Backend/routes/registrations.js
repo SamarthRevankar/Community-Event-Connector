@@ -35,13 +35,13 @@ router.post(
       }
 
       // Check for duplicate registration
-      const existing = await Registration.findOne({ eventId, attendeeEmail: req.body.attendeeEmail });
+      const existing = await Registration.findOne({ eventId: event._id, attendeeEmail: req.body.attendeeEmail });
       if (existing) {
         return res.status(409).json({ error: 'This email is already registered for this event.' });
       }
 
       const registration = await Registration.create({
-        eventId,
+        eventId: event._id,
         attendeeName: req.body.attendeeName,
         attendeeEmail: req.body.attendeeEmail,
         dietaryRestrictions: req.body.dietaryRestrictions || '',

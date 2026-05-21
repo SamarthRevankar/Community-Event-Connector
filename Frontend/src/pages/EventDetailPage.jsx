@@ -23,7 +23,7 @@ const EventDetailPage = () => {
     const fetchEvent = async () => {
       try {
         const response = await eventsApi.get(id);
-        setEvent(response.data);
+        setEvent(response.data || response);
       } catch (err) {
         setError(err);
       } finally {
@@ -39,7 +39,7 @@ const EventDetailPage = () => {
     const handler = ({ eventId }) => {
       if (eventId === id) {
         setEvent((prev) =>
-          prev ? { ...prev, registrations: (prev.registrations || 0) + 1 } : prev
+          prev ? { ...prev, attendeeCount: (prev.attendeeCount || 0) + 1 } : prev
         );
       }
     };
@@ -62,7 +62,7 @@ const EventDetailPage = () => {
   const handleRegistrationSuccess = (registrationData) => {
     setEvent(prev => ({
       ...prev,
-      registrations: (prev.registrations || 0) + 1
+      attendeeCount: (prev.attendeeCount || 0) + 1
     }));
     setRegistrationSuccessMsg(`Successfully registered for ${event.title}!`);
     setTimeout(() => setRegistrationSuccessMsg(''), 5000);
@@ -183,7 +183,7 @@ const EventDetailPage = () => {
               </div>
               <div className="pt-4 border-t border-slate-100">
                 <p className="font-medium text-slate-900">
-                  <span className="text-2xl font-bold text-blue-600 mr-2">{event.registrations || 0}</span>
+                  <span className="text-2xl font-bold text-blue-600 mr-2">{event.attendeeCount || 0}</span>
                   Attending
                 </p>
               </div>
