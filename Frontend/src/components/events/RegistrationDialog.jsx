@@ -1,4 +1,3 @@
-import React from 'react';
 import RegistrationForm from './RegistrationForm';
 
 const RegistrationDialog = ({ isOpen, onClose, eventId, eventTitle, onSuccess }) => {

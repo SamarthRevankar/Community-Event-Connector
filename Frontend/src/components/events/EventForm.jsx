@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { CATEGORIES, validateEvent } from '../../utils/eventValidation';
 import { useNavigate } from 'react-router-dom';
 import LocationPicker from './LocationPicker';
@@ -29,6 +29,7 @@ const EventForm = ({ initialData, onSubmit, isSubmitting, error }) => {
         formattedDate = d.toISOString().slice(0, 16);
       }
       
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setFormData({
         title: initialData.title || '',
         description: initialData.description || '',

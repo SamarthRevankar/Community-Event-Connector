@@ -1,4 +1,3 @@
-import React from 'react';
 
 const EmptyState = ({ title, message, actionLabel, onAction }) => {
   return (

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import axios from 'axios';
 import { useSocket } from '../context/SocketContext';
 import { useAuth } from '../context/AuthContext';
@@ -15,20 +15,31 @@ export default function EventChat({ eventId }) {
   const [open, setOpen] = useState(false);
   const bottomRef = useRef(null);
 
-  // Load chat history
+  // Load and poll chat history (Vercel Serverless Fallback)
   useEffect(() => {
     if (!open) return;
     const fetchMessages = async () => {
       try {
         const { data } = await axios.get(`${API_URL}/api/events/${eventId}/chat`);
-        setMessages(data);
+        setMessages(prev => {
+          // Merge fetched data, keeping optimistic messages that haven't been replaced
+          const existingIds = new Set(data.map(m => m._id));
+          const optimistics = prev.filter(m => m._optimistic && !existingIds.has(m._id));
+          return [...data, ...optimistics].sort((a, b) => new Date(a.createdAt) - new Date(b.createdAt));
+        });
       } catch (e) {
         console.error('Failed to load chat', e);
       } finally {
         setLoading(false);
       }
     };
+    
+    // Initial fetch
     fetchMessages();
+    
+    // Poll every 5 seconds for Vercel
+    const intervalId = setInterval(fetchMessages, 5000);
+    return () => clearInterval(intervalId);
   }, [eventId, open]);
 
   // Real-time new messages

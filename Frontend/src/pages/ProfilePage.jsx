@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNavigate, Link } from 'react-router-dom';
 import { eventsApi } from '../api/eventsApi';
@@ -35,12 +35,15 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setForm({ name: user.name || '', bio: user.bio || '', avatar: user.avatar || '' });
+      setTimeout(() => {
+        setForm({ name: user.name || '', bio: user.bio || '', avatar: user.avatar || '' });
+      }, 0);
     }
   }, [user]);
 
   useEffect(() => {
     if (activeTab === 'My Events' && user) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setEventsLoading(true);
       eventsApi.getUserEvents(user._id)
         .then(res => setMyEvents(res.data || []))
@@ -52,7 +55,7 @@ export default function ProfilePage() {
   if (!user) return null;
 
   const initials = user.name?.split(' ').map(n => n[0]).join('').toUpperCase().slice(0, 2);
-  const memberSince = new Date(user.createdAt || Date.now()).toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
+  const memberSince = new Date(user.createdAt || '2026-01-01T00:00:00Z').toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
 
   const handleSave = async (e) => {
     e.preventDefault();

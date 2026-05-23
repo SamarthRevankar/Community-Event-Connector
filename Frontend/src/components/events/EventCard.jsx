@@ -1,5 +1,5 @@
-import React from 'react';
 import { Link } from 'react-router-dom';
+import { memo } from 'react';
 
 const CATEGORY_COLORS = {
   'Technology':       'bg-blue-50 text-blue-700',
@@ -13,7 +13,7 @@ const CATEGORY_COLORS = {
 };
 const getCategoryClasses = (category) => CATEGORY_COLORS[category] || 'bg-slate-100 text-slate-600';
 
-const EventCard = React.memo(({ event }) => {
+const EventCard = memo(({ event }) => {
   const { _id, title, date, category, location, organizerName, attendeeCount } = event;
 
   // Format date

@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { eventsApi } from '../api/eventsApi';
 import EventForm from '../components/events/EventForm';

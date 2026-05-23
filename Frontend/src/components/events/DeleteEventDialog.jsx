@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect } from 'react';
 
 const DeleteEventDialog = ({ isOpen, onClose, onConfirm, isDeleting, title }) => {
   useEffect(() => {

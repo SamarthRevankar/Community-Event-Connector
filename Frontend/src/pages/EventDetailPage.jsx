@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { eventsApi } from '../api/eventsApi';
 import LoadingSkeleton from '../components/feedback/LoadingSkeleton';
@@ -40,19 +40,25 @@ const EventDetailPage = () => {
     fetchEvent();
   }, [id]);
 
-  // Fetch attendees list
+  // Fetch and poll attendees list (Vercel Serverless Fallback)
   useEffect(() => {
     const fetchAttendees = async () => {
       try {
         const response = await eventsApi.getRegistrations(id);
-        setAttendees(response.data || response || []);
+        const fetchedAttendees = response.data || response || [];
+        setAttendees(fetchedAttendees);
+        // Sync attendee count
+        setEvent(prev => prev ? { ...prev, attendeeCount: fetchedAttendees.length } : prev);
       } catch {
         setAttendees([]);
       } finally {
         setAttendeesLoading(false);
       }
     };
+    
     fetchAttendees();
+    const intervalId = setInterval(fetchAttendees, 15000);
+    return () => clearInterval(intervalId);
   }, [id]);
 
   // ── Real-time: live attendee count & list ───────────────

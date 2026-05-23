@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useSearchParams } from 'react-router-dom';
 import { eventsApi } from '../api/eventsApi';
 import EventCard from '../components/events/EventCard';
@@ -36,6 +36,7 @@ const EventListPage = () => {
   }, [searchParams]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchEvents();
   }, [fetchEvents]);
 

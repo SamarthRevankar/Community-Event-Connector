@@ -1,4 +1,4 @@
-import React, { useEffect } from 'react';
+import { useEffect, memo } from 'react';
 import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
 import MarkerClusterGroup from 'react-leaflet-cluster';
 import { Link } from 'react-router-dom';
@@ -54,7 +54,7 @@ const LocationCentering = ({ center }) => {
   return null;
 };
 
-const MapView = React.memo(({ events = [], userLocation }) => {
+const MapView = memo(({ events = [], userLocation }) => {
   const defaultCenter = [39.8283, -98.5795]; // geographic center of the US
   const center = userLocation || defaultCenter;
   const zoom = userLocation ? 12 : 4;

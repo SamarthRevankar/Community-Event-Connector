@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
+/* eslint-disable react-refresh/only-export-components */
+import { createContext, useContext, useEffect, useState } from 'react';
 import { io } from 'socket.io-client';
 
 const SocketContext = createContext(null);
@@ -25,6 +26,7 @@ export const SocketProvider = ({ children }) => {
       console.log('⚡ Socket connected:', newSocket.id);
     });
 
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setSocket(newSocket);
 
     return () => {

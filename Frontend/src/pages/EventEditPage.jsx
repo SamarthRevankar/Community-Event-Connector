@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from 'react';
-import { useNavigate, useParams, Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { useNavigate, useParams } from 'react-router-dom';
 import { eventsApi } from '../api/eventsApi';
 import EventForm from '../components/events/EventForm';
 import LoadingSkeleton from '../components/feedback/LoadingSkeleton';

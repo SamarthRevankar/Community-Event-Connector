@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import { useState } from 'react';
 import { eventsApi } from '../../api/eventsApi';
 
 const RegistrationForm = ({ eventId, onSuccess, onCancel }) => {

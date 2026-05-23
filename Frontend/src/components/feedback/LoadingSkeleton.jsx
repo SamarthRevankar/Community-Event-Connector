@@ -1,4 +1,3 @@
-import React from 'react';
 
 const LoadingSkeleton = ({ type = 'card', count = 3 }) => {
   if (type === 'form') {
