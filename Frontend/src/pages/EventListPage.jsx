@@ -8,6 +8,7 @@ import SearchBar from '../components/events/SearchBar';
 import FilterPanel from '../components/events/FilterPanel';
 import FilterChips from '../components/events/FilterChips';
 import MapView from '../components/events/MapView';
+import Tooltip from '../components/Tooltip';
 import { useSocket } from '../context/SocketContext';
 
 const EventListPage = () => {
@@ -122,18 +123,22 @@ const EventListPage = () => {
           <SearchBar />
         </div>
         <div className="flex items-center gap-2">
-          <button
-            onClick={handleGetLocation}
-            className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors"
-          >
-            📍 Near Me
-          </button>
-          <Link
-            to="/events/new"
-            className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 whitespace-nowrap transition-colors"
-          >
-            + Create Event
-          </Link>
+          <Tooltip text="Use your location to find nearby events" position="bottom">
+            <button
+              onClick={handleGetLocation}
+              className="inline-flex items-center rounded-md bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm ring-1 ring-inset ring-slate-300 hover:bg-slate-50 transition-colors"
+            >
+              📍 Near Me
+            </button>
+          </Tooltip>
+          <Tooltip text="Post a new community event" position="bottom">
+            <Link
+              to="/events/new"
+              className="inline-flex items-center rounded-md bg-blue-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-blue-700 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 whitespace-nowrap transition-colors"
+            >
+              + Create Event
+            </Link>
+          </Tooltip>
         </div>
       </div>
 

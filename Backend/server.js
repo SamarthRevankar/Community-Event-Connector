@@ -100,8 +100,11 @@ app.get('/api/health', (req, res) => {
   });
 });
 
+app.use('/api/auth', require('./routes/auth'));
+app.use('/api/users', require('./routes/users'));
 app.use('/api/events', require('./routes/events'));
 app.use('/api/events/:eventId/registrations', require('./routes/registrations'));
+app.use('/api/events/:eventId/chat', require('./routes/chat'));
 
 // ── 404 Handler ──────────────────────────────────────────
 app.use((req, res) => {

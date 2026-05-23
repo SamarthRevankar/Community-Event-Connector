@@ -1,6 +1,7 @@
 const express = require('express');
 const { body, query, param, validationResult } = require('express-validator');
 const { Event, CATEGORIES } = require('../models/Event');
+const { protect, optionalAuth } = require('../middleware/auth');
 
 const router = express.Router();
 
@@ -60,6 +61,7 @@ const eventBodyRules = [
 // Supports: ?search=, ?category=, ?startDate=, ?endDate=
 router.get(
   '/',
+  optionalAuth,
   [
     query('search').optional().trim(),
     query('category').optional().trim()
@@ -126,6 +128,7 @@ router.get(
 // ── GET /api/events/:id ───────────────────────────────────
 router.get(
   '/:id',
+  optionalAuth,
   [param('id').isMongoId().withMessage('Invalid event ID')],
   validate,
   async (req, res, next) => {
@@ -152,10 +155,13 @@ router.get(
 );
 
 // ── POST /api/events ──────────────────────────────────────
-router.post('/', eventBodyRules, validate, async (req, res, next) => {
+router.post('/', protect, eventBodyRules, validate, async (req, res, next) => {
   try {
     const { title, description, date, location, category, organizerName } = req.body;
-    const event = await Event.create({ title, description, date, location, category, organizerName });
+    const event = await Event.create({
+      title, description, date, location, category, organizerName,
+      createdBy: req.user._id,
+    });
     
     // Emit event
     const io = req.app.get('io');
@@ -170,10 +176,17 @@ router.post('/', eventBodyRules, validate, async (req, res, next) => {
 // ── PUT /api/events/:id ───────────────────────────────────
 router.put(
   '/:id',
+  protect,
   [param('id').isMongoId().withMessage('Invalid event ID'), ...eventBodyRules],
   validate,
   async (req, res, next) => {
     try {
+      const existing = await Event.findById(req.params.id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Event not found' });
+      // Ownership: only creator can edit (null createdBy = legacy seeded event, allow anyone)
+      if (existing.createdBy && existing.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'You do not have permission to edit this event' });
+      }
       const { title, description, date, location, category, organizerName } = req.body;
       const event = await Event.findByIdAndUpdate(
         req.params.id,
@@ -198,10 +211,17 @@ router.put(
 // ── DELETE /api/events/:id ────────────────────────────────
 router.delete(
   '/:id',
+  protect,
   [param('id').isMongoId().withMessage('Invalid event ID')],
   validate,
   async (req, res, next) => {
     try {
+      const existing = await Event.findById(req.params.id);
+      if (!existing) return res.status(404).json({ success: false, message: 'Event not found' });
+      // Ownership: only creator can delete (null createdBy = legacy seeded event, allow anyone)
+      if (existing.createdBy && existing.createdBy.toString() !== req.user._id.toString()) {
+        return res.status(403).json({ success: false, message: 'You do not have permission to delete this event' });
+      }
       const event = await Event.findByIdAndDelete(req.params.id);
       if (!event) {
         return res.status(404).json({ success: false, message: 'Event not found' });

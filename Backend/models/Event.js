@@ -70,6 +70,11 @@ const eventSchema = new mongoose.Schema(
       trim: true,
       maxlength: [80, 'Organizer name cannot exceed 80 characters'],
     },
+    createdBy: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
   },
   {
     timestamps: true, // adds createdAt and updatedAt

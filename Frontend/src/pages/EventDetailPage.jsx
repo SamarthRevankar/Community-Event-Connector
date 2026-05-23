@@ -5,7 +5,11 @@ import LoadingSkeleton from '../components/feedback/LoadingSkeleton';
 import EmptyState from '../components/feedback/EmptyState';
 import DeleteEventDialog from '../components/events/DeleteEventDialog';
 import RegistrationDialog from '../components/events/RegistrationDialog';
+import EventChat from '../components/EventChat';
+import Tooltip from '../components/Tooltip';
 import { useSocket } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
+import { Users, UserPlus } from 'lucide-react';
 
 const EventDetailPage = () => {
   const { id } = useParams();
@@ -17,7 +21,10 @@ const EventDetailPage = () => {
   const [showDeleteDialog, setShowDeleteDialog] = useState(false);
   const [showRegistrationDialog, setShowRegistrationDialog] = useState(false);
   const [registrationSuccessMsg, setRegistrationSuccessMsg] = useState('');
+  const [attendees, setAttendees] = useState([]);
+  const [attendeesLoading, setAttendeesLoading] = useState(true);
   const socket = useSocket();
+  const { user } = useAuth();
 
   useEffect(() => {
     const fetchEvent = async () => {
@@ -33,14 +40,35 @@ const EventDetailPage = () => {
     fetchEvent();
   }, [id]);
 
-  // ── Real-time: live attendee count ───────────────────────
+  // Fetch attendees list
+  useEffect(() => {
+    const fetchAttendees = async () => {
+      try {
+        const response = await eventsApi.getRegistrations(id);
+        setAttendees(response.data || response || []);
+      } catch {
+        setAttendees([]);
+      } finally {
+        setAttendeesLoading(false);
+      }
+    };
+    fetchAttendees();
+  }, [id]);
+
+  // ── Real-time: live attendee count & list ───────────────
   useEffect(() => {
     if (!socket || !id) return;
-    const handler = ({ eventId }) => {
+    const handler = ({ eventId, registration }) => {
       if (eventId === id) {
         setEvent((prev) =>
           prev ? { ...prev, attendeeCount: (prev.attendeeCount || 0) + 1 } : prev
         );
+        if (registration) {
+          setAttendees((prev) => {
+            if (prev.find((a) => a._id === registration._id)) return prev;
+            return [registration, ...prev];
+          });
+        }
       }
     };
     socket.on('registrationAdded', handler);
@@ -60,10 +88,14 @@ const EventDetailPage = () => {
   };
 
   const handleRegistrationSuccess = (registrationData) => {
+    // Optimistic UI — immediately update count and list before server confirms
     setEvent(prev => ({
       ...prev,
       attendeeCount: (prev.attendeeCount || 0) + 1
     }));
+    if (registrationData) {
+      setAttendees(prev => [registrationData, ...prev]);
+    }
     setRegistrationSuccessMsg(`Successfully registered for ${event.title}!`);
     setTimeout(() => setRegistrationSuccessMsg(''), 5000);
   };
@@ -113,18 +145,26 @@ const EventDetailPage = () => {
           Back to Events
         </Link>
         <div className="flex items-center gap-3 w-full sm:w-auto">
-          <Link
-            to={`/events/${id}/edit`}
-            className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
-          >
-            Edit
-          </Link>
-          <button
-            onClick={() => setShowDeleteDialog(true)}
-            className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
-          >
-            Delete
-          </button>
+          {(!event.createdBy || (user && user._id === (event.createdBy?._id || event.createdBy))) && (
+            <>
+              <Tooltip text="Edit event details" position="bottom">
+                <Link
+                  to={`/events/${id}/edit`}
+                  className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-slate-300 shadow-sm text-sm font-medium rounded-md text-slate-700 bg-white hover:bg-slate-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500"
+                >
+                  Edit
+                </Link>
+              </Tooltip>
+              <Tooltip text="Permanently delete this event" position="bottom">
+                <button
+                  onClick={() => setShowDeleteDialog(true)}
+                  className="flex-1 sm:flex-none inline-flex justify-center items-center px-4 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-red-600 hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500"
+                >
+                  Delete
+                </button>
+              </Tooltip>
+            </>
+          )}
         </div>
       </div>
 
@@ -147,9 +187,11 @@ const EventDetailPage = () => {
         <div className="px-6 py-8 sm:p-10 border-b border-slate-100 bg-slate-50">
           <div className="flex flex-col md:flex-row justify-between items-start gap-6">
             <div className="space-y-4">
-              <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800">
-                {event.category}
-              </span>
+              <Tooltip text={`Category: ${event.category}`} position="right">
+                <span className="inline-flex items-center rounded-full bg-blue-100 px-3 py-1 text-sm font-medium text-blue-800 cursor-default">
+                  {event.category}
+                </span>
+              </Tooltip>
               <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 tracking-tight">
                 {event.title}
               </h1>
@@ -182,10 +224,12 @@ const EventDetailPage = () => {
                 </div>
               </div>
               <div className="pt-4 border-t border-slate-100">
-                <p className="font-medium text-slate-900">
-                  <span className="text-2xl font-bold text-blue-600 mr-2">{event.attendeeCount || 0}</span>
-                  Attending
-                </p>
+                <Tooltip text="Live attendee count — updates in real-time" position="left">
+                  <p className="font-medium text-slate-900 cursor-default">
+                    <span className="text-2xl font-bold text-blue-600 mr-2">{event.attendeeCount || 0}</span>
+                    Attending
+                  </p>
+                </Tooltip>
               </div>
             </div>
           </div>
@@ -198,19 +242,71 @@ const EventDetailPage = () => {
             {event.description}
           </div>
         </div>
+
+        {/* ── Live Attendee List ─────────────────────────── */}
+        <div className="px-6 py-8 sm:px-10 border-t border-slate-100">
+          <div className="flex items-center gap-3 mb-4">
+            <div className="w-9 h-9 bg-indigo-100 rounded-xl flex items-center justify-center">
+              <Users className="w-4.5 h-4.5 text-indigo-600" />
+            </div>
+            <h3 className="text-lg font-bold text-slate-900">Attendees</h3>
+            <span className="text-sm text-slate-500">({event.attendeeCount || 0})</span>
+          </div>
+
+          {attendeesLoading ? (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {[1, 2, 3].map((i) => (
+                <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-slate-50">
+                  <div className="w-8 h-8 rounded-full skeleton-shimmer" />
+                  <div className="flex-1">
+                    <div className="h-3 w-24 rounded skeleton-shimmer mb-1.5" />
+                    <div className="h-2.5 w-16 rounded skeleton-shimmer" />
+                  </div>
+                </div>
+              ))}
+            </div>
+          ) : attendees.length === 0 ? (
+            <div className="text-center py-6 bg-slate-50 rounded-xl">
+              <UserPlus className="w-8 h-8 text-slate-300 mx-auto mb-2" />
+              <p className="text-sm text-slate-500">No attendees yet. Be the first to register!</p>
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+              {attendees.map((att, i) => (
+                <div
+                  key={att._id || i}
+                  className="flex items-center gap-3 p-3 rounded-xl bg-slate-50 hover:bg-indigo-50 transition-colors animate-fade-in"
+                  style={{ animationDelay: `${i * 30}ms` }}
+                >
+                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-indigo-400 to-purple-500 flex items-center justify-center text-white text-xs font-bold flex-shrink-0">
+                    {att.attendeeName?.[0]?.toUpperCase() || '?'}
+                  </div>
+                  <div className="min-w-0">
+                    <p className="text-sm font-medium text-slate-800 truncate">{att.attendeeName}</p>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
         
         {/* Registration CTA Section */}
         <div className="bg-blue-50 px-6 py-8 sm:px-10 text-center border-t border-blue-100">
           <h3 className="text-xl font-bold text-slate-900 mb-2">Want to join this event?</h3>
           <p className="text-slate-600 mb-6 max-w-lg mx-auto">Register now to secure your spot and receive updates about any changes to the schedule or location.</p>
-          <button
-            onClick={() => setShowRegistrationDialog(true)}
-            className="inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
-          >
-            Register Now
-          </button>
+          <Tooltip text="Fill out a quick form to RSVP" position="top">
+            <button
+              onClick={() => setShowRegistrationDialog(true)}
+              className="inline-flex justify-center items-center px-8 py-3 border border-transparent text-base font-medium rounded-md text-white bg-blue-600 hover:bg-blue-700 shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-blue-500 transition-colors"
+            >
+              Register Now
+            </button>
+          </Tooltip>
         </div>
       </div>
+
+      {/* ── Event Discussion Board ─────────────────────── */}
+      <EventChat eventId={id} />
 
       <DeleteEventDialog
         isOpen={showDeleteDialog}
