@@ -9,10 +9,9 @@ const userSchema = new mongoose.Schema({
   avatar: { type: String, trim: true, default: '' },
 }, { timestamps: true });
 
-userSchema.pre('save', async function (next) {
-  if (!this.isModified('passwordHash')) return next();
+userSchema.pre('save', async function () {
+  if (!this.isModified('passwordHash')) return;
   this.passwordHash = await bcrypt.hash(this.passwordHash, 12);
-  next();
 });
 
 userSchema.methods.comparePassword = async function (plain) {
