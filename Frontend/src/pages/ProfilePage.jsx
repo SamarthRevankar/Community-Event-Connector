@@ -35,9 +35,10 @@ export default function ProfilePage() {
 
   useEffect(() => {
     if (user) {
-      setTimeout(() => {
+      const id = setTimeout(() => {
         setForm({ name: user.name || '', bio: user.bio || '', avatar: user.avatar || '' });
       }, 0);
+      return () => clearTimeout(id);
     }
   }, [user]);
 

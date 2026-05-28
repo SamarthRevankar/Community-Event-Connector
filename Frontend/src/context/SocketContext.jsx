@@ -22,14 +22,16 @@ export const SocketProvider = ({ children }) => {
       transports: isProduction ? ['polling'] : ['websocket', 'polling'],
     });
 
-    newSocket.on('connect', () => {
+    const handleConnect = () => {
       console.log('⚡ Socket connected:', newSocket.id);
-    });
+    };
+    newSocket.on('connect', handleConnect);
 
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setSocket(newSocket);
 
     return () => {
+      newSocket.off('connect', handleConnect);
       newSocket.close();
     };
   }, []);

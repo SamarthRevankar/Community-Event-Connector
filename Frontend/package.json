@@ -7,7 +7,8 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "doctor": "npx react-doctor@latest"
   },
   "dependencies": {
     "axios": "^1.16.0",
@@ -31,6 +32,7 @@
     "eslint-plugin-react-refresh": "^0.5.2",
     "globals": "^17.5.0",
     "postcss": "^8.5.14",
+    "react-doctor": "^0.2.10",
     "tailwindcss": "^3.4.19",
     "vite": "^8.0.10",
     "vite-plugin-pwa": "^1.3.0",
